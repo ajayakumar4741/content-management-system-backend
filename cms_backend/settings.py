@@ -154,7 +154,7 @@ SIMPLE_JWT = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "https://techfoliofrontend.onrender.com/",
+    "https://techfoliofrontend.onrender.com",
     "http://localhost:5173",
     
 ]
