@@ -53,9 +53,22 @@ INSTALLED_APPS = [
     'captcha',
 ]
 
+from django.urls import reverse_lazy
+
+CAPTCHA_IMAGE_SIZE = (100, 50)
+CAPTCHA_FONT_SIZE = 26
+CAPTCHA_LENGTH = 5
+CAPTCHA_TIMEOUT = 5  # minutes
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "captcha_cache",
+    }
+}
+
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.middleware.security.SecurityMiddleware',    
     'django.contrib.sessions.middleware.SessionMiddleware',
     "corsheaders.middleware.CorsMiddleware",
     'django.middleware.common.CommonMiddleware',
