@@ -60,6 +60,9 @@ CAPTCHA_FONT_SIZE = 26
 CAPTCHA_LENGTH = 5
 CAPTCHA_TIMEOUT = 5  # minutes
 
+CORS_ALLOW_CREDENTIALS = True
+
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
@@ -172,3 +175,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     
 ]
+
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True   # if HTTPS
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
