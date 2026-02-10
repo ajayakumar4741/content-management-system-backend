@@ -13,6 +13,6 @@ urlpatterns = [
     path("blogs/<slug:slug>/", blogs, name="blogs"),
     path("get_userinfo/<str:username>/", get_userinfo, name="get_userinfo"),
     path("api/subscribe/", subscribe, name="subscribe"),
-    path("api/get_captcha/", get_captcha, name="get_captcha"),
+    # path("api/get_captcha/", get_captcha, name="get_captcha"),
 
 ]
