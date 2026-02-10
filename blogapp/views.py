@@ -1,5 +1,6 @@
 from .serializers import *
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -9,14 +10,40 @@ from .forms import *
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view
 from django.core.mail import send_mail
-from captcha.helpers import captcha_image_url
-from captcha.models import CaptchaStore
+# from captcha.helpers import captcha_image_url
+# from captcha.models import CaptchaStore
+import requests
+from .utils import get_client_ip
+from django.conf import settings
 
-@api_view(["GET"])
-def get_captcha(request):
-    new_key = CaptchaStore.generate_key()
-    image_url = captcha_image_url(new_key)
-    return Response({"key": new_key, "image_url": image_url})
+secret_key = settings.RECAPTCHA_SECRET_KEY
+
+class Submission(APIView):
+  
+  
+  def post(self, request, *args, **kwargs):
+    r = requests.post(
+      'https://www.google.com/recaptcha/api/siteverify',
+      data={
+        'secret': secret_key,
+        'response': request.data['g-recaptcha-response'],
+        'remoteip': get_client_ip(self.request),  # Optional
+      }
+    )
+
+    if r.json()['success']:
+      # Successfuly validated
+      # Handle the submission, with confidence!
+      return self.create(request, *args, **kwargs)
+
+    # Error while verifying the captcha 
+    return Response(data={'error': 'ReCAPTCHA not verified.'}, status=status.HTTP_406_NOT_ACCEPTABLE)
+
+# @api_view(["GET"])
+# def get_captcha(request):
+#     new_key = CaptchaStore.generate_key()
+#     image_url = captcha_image_url(new_key)
+#     return Response({"key": new_key, "image_url": image_url})
 
 
 @api_view(['POST'])
@@ -49,16 +76,54 @@ def blog_pagination(request):
 
 @api_view(['POST'])
 def registerUser(request):
-    
-    form = RegistrationForm(request.data)
-    if not form.is_valid():
-        return Response({"error": "Captcha incorrect or form invalid", "details": form.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
+
+    # ✅ 1. Get token from frontend
+    recaptcha_token = request.data.get("recaptcha_token")
+
+    if not recaptcha_token:
+        return Response(
+            {"error": "Captcha token missing"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # ✅ 2. Verify with Google
+    google_verify_url = "https://www.google.com/recaptcha/api/siteverify"
+
+    payload = {
+        "secret": settings.RECAPTCHA_SECRET_KEY,
+        "response": recaptcha_token,
+    }
+
+    r = requests.post(google_verify_url, data=payload)
+    result = r.json()
+
+    if not result.get("success"):
+        return Response(
+            {"error": "Invalid captcha"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # ✅ 3. Create user
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data,status=status.HTTP_201_CREATED)
-    return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# @api_view(['POST'])
+# def registerUser(request):
+    
+#     form = RegistrationForm(request.data)
+#     recaptcha_token = request.data.get("recaptcha_token")
+#     if not form.is_valid():
+#         return Response({"error": "Captcha incorrect or form invalid", "details": form.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+#     serializer = UserRegistrationSerializer(data=request.data)
+#     if serializer.is_valid():
+#         serializer.save()
+#         return Response(serializer.data,status=status.HTTP_201_CREATED)
+#     return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
