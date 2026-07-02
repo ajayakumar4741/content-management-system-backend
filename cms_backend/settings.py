@@ -37,6 +37,8 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")  # Use App Password for Gmail
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
 
 # Application definition
 
@@ -51,6 +53,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'captcha',
+    # allauth stuff
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 from django.urls import reverse_lazy
@@ -79,6 +86,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = 'cms_backend.urls'
@@ -100,6 +108,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'cms_backend.wsgi.application'
 
+AUTHENTICATION_BACKENDS = [
+    
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by email
+    'allauth.account.auth_backends.AuthenticationBackend',
+    
+]
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

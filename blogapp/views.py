@@ -10,11 +10,52 @@ from .forms import *
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view
 from django.core.mail import send_mail
-# from captcha.helpers import captcha_image_url
-# from captcha.models import CaptchaStore
 import requests
 from .utils import get_client_ip
 from django.conf import settings
+# for oauth
+from rest_framework.permissions import AllowAny
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import CustomUser
+
+class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        credential = request.data.get("credential")
+        if not credential:
+            return Response({"error": "Missing credential"}, status=400)
+
+        try:
+            id_info = id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                settings.GOOGLE_CLIENT_ID
+            )
+        except Exception:
+            return Response({"error": "Invalid Google token"}, status=400)
+
+        email = id_info.get("email")
+        if not email:
+            return Response({"error": "No email returned from Google"}, status=400)
+
+        user, created = CustomUser.objects.get_or_create(
+            email=email,
+            defaults={"username": email.split("@")[0]}
+        )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": {
+                "email": user.email,
+                "username": user.username,
+            },
+        })
 
 secret_key = settings.RECAPTCHA_SECRET_KEY
 
