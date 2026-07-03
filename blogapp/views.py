@@ -28,18 +28,24 @@ class GoogleLoginView(APIView):
         if not credential:
             return Response({"error": "Missing credential"}, status=400)
 
+        print('Google auth request data:', request.data)
+        print('Using Google client ID:', settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
+
         try:
             id_info = id_token.verify_oauth2_token(
                 credential,
                 google_requests.Request(),
-                settings.GOOGLE_CLIENT_ID
+                settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
+                clock_skew_in_seconds=300,
             )
-        except Exception:
-            return Response({"error": "Invalid Google token"}, status=400)
+            print('Google id_info:', id_info)
+        except Exception as exc:
+            print('Google token verification failed:', str(exc))
+            return Response({"error": "Invalid Google token", "detail": str(exc)}, status=400)
 
         email = id_info.get("email")
         if not email:
-            return Response({"error": "No email returned from Google"}, status=400)
+            return Response({"error": "No email returned from Google", "detail": id_info}, status=400)
 
         user, created = CustomUser.objects.get_or_create(
             email=email,
@@ -152,19 +158,7 @@ def registerUser(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# @api_view(['POST'])
-# def registerUser(request):
-    
-#     form = RegistrationForm(request.data)
-#     recaptcha_token = request.data.get("recaptcha_token")
-#     if not form.is_valid():
-#         return Response({"error": "Captcha incorrect or form invalid", "details": form.errors}, status=status.HTTP_400_BAD_REQUEST)
-    
-#     serializer = UserRegistrationSerializer(data=request.data)
-#     if serializer.is_valid():
-#         serializer.save()
-#         return Response(serializer.data,status=status.HTTP_201_CREATED)
-#     return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
