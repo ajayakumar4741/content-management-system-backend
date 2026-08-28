@@ -126,10 +126,10 @@ AUTHENTICATION_BACKENDS = [
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cms_db',
-        'USER': 'postgres',   # or your custom user
+        'NAME': 'cms_db_v53b',
+        'USER': 'cms_db_v53b_user',   # or your custom user
         'PASSWORD': config("PSQL_PSWD", cast=str),
-        'HOST': 'localhost',
+        'HOST': 'dpg-da8lhdnqj5pc73esbg5g-a',
         'PORT': '5432',
     }
 }
