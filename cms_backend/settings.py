@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import base64
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -185,7 +186,8 @@ AUTH_USER_MODEL = 'blogapp.CustomUser'
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
-    "SIGNING_KEY": SECRET_KEY,
+    "SIGNING_KEY": base64.b64decode(config("JWT_PRIVATE_KEY_B64")),
+    "VERIFYING_KEY": base64.b64decode(config("JWT_PUBLIC_KEY_B64")),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
