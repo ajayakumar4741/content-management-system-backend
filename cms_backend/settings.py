@@ -184,6 +184,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'blogapp.CustomUser'
 
 SIMPLE_JWT = {
+    "ALGORITHM": "RS256",
+    "SIGNING_KEY": SECRET_KEY,
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
