@@ -196,10 +196,19 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'blogapp.CustomUser'
 
+def decode_base64_key(key_b64):
+    """Decode base64 key with proper padding handling"""
+    key_b64 = key_b64.strip()
+    # Add padding if necessary
+    missing_padding = len(key_b64) % 4
+    if missing_padding:
+        key_b64 += '=' * (4 - missing_padding)
+    return base64.b64decode(key_b64).decode('utf-8')
+
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
-    "SIGNING_KEY": base64.b64decode(config("JWT_PRIVATE_KEY_B64")).decode('utf-8'),
-    "VERIFYING_KEY": base64.b64decode(config("JWT_PUBLIC_KEY_B64")).decode('utf-8'),
+    "SIGNING_KEY": decode_base64_key(config("JWT_PRIVATE_KEY_B64")),
+    "VERIFYING_KEY": decode_base64_key(config("JWT_PUBLIC_KEY_B64")),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
