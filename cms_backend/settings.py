@@ -198,8 +198,8 @@ AUTH_USER_MODEL = 'blogapp.CustomUser'
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
-    "SIGNING_KEY": config("JWT_PRIVATE_KEY_B64"),
-    "VERIFYING_KEY": config("JWT_PUBLIC_KEY_B64"),
+    "SIGNING_KEY": base64.b64decode(config("JWT_PRIVATE_KEY_B64")).decode('utf-8'),
+    "VERIFYING_KEY": base64.b64decode(config("JWT_PUBLIC_KEY_B64")).decode('utf-8'),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
