@@ -123,16 +123,24 @@ AUTHENTICATION_BACKENDS = [
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cms_db_v53b',
-        'USER': 'cms_db_v53b_user',   # or your custom user
-        'PASSWORD': config("PSQL_PSWD", cast=str),
-        'HOST': 'dpg-da8lhdnqj5pc73esbg5g-a',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(default=config("DATABASE_URL"))
 }
+
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'cms_db_v53b',                # database name
+#         'USER': 'cms_db_v53b_user',           # username
+#         'PASSWORD': config("PSQL_PSWD"),      # password from env var
+#         'HOST': 'dpg-da8lhdnqj5pc73esbg5g-a.oregon-postgres.render.com',  # hostname only
+#         'PORT': '5432',                       # port
+#     }
+# }
+
 
 
 # Password validation
