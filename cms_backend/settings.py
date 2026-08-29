@@ -197,13 +197,22 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'blogapp.CustomUser'
 
 def decode_base64_key(key_b64):
-    """Decode base64 key with proper padding handling"""
+    """Decode base64 key and return as string or bytes appropriately"""
     key_b64 = key_b64.strip()
     # Add padding if necessary
     missing_padding = len(key_b64) % 4
     if missing_padding:
         key_b64 += '=' * (4 - missing_padding)
-    return base64.b64decode(key_b64).decode('utf-8')
+    
+    decoded_bytes = base64.b64decode(key_b64)
+    
+    # Try to decode as UTF-8 (for PEM format), fallback to latin-1
+    try:
+        return decoded_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        # If it's binary DER format, return as bytes
+        # PyJWT can handle both PEM strings and key bytes
+        return decoded_bytes
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
