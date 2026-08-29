@@ -14,6 +14,8 @@ from pathlib import Path
 from datetime import timedelta
 import base64
 from decouple import config
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -62,7 +64,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount.providers.google',
 ]
 
-from django.urls import reverse_lazy
+
 
 CAPTCHA_IMAGE_SIZE = (100, 50)
 CAPTCHA_FONT_SIZE = 26
@@ -196,8 +198,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'blogapp.CustomUser'
 
-def decode_base64_key(key_b64):
-    """Decode base64 key and return as string or bytes appropriately"""
+def decode_base64_key(key_b64, is_private=False):
+    """Decode base64 key and convert to PEM format if needed"""
     key_b64 = key_b64.strip()
     # Add padding if necessary
     missing_padding = len(key_b64) % 4
@@ -206,18 +208,36 @@ def decode_base64_key(key_b64):
     
     decoded_bytes = base64.b64decode(key_b64)
     
-    # Try to decode as UTF-8 (for PEM format), fallback to latin-1
+    # Try to decode as UTF-8 (already PEM format)
     try:
         return decoded_bytes.decode('utf-8')
     except UnicodeDecodeError:
-        # If it's binary DER format, return as bytes
-        # PyJWT can handle both PEM strings and key bytes
-        return decoded_bytes
+        # If binary, it's DER format - convert to PEM
+        try:
+            if is_private:
+                key = serialization.load_der_private_key(
+                    decoded_bytes, password=None, backend=default_backend()
+                )
+                return key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.PKCS8,
+                    encryption_algorithm=serialization.NoEncryption()
+                ).decode('utf-8')
+            else:
+                key = serialization.load_der_public_key(
+                    decoded_bytes, backend=default_backend()
+                )
+                return key.public_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PublicFormat.SubjectPublicKeyInfo
+                ).decode('utf-8')
+        except Exception as e:
+            raise ValueError(f"Failed to parse key: {e}")
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
-    "SIGNING_KEY": decode_base64_key(config("JWT_PRIVATE_KEY_B64")),
-    "VERIFYING_KEY": decode_base64_key(config("JWT_PUBLIC_KEY_B64")),
+    "SIGNING_KEY": decode_base64_key(config("JWT_PRIVATE_KEY_B64"), is_private=True),
+    "VERIFYING_KEY": decode_base64_key(config("JWT_PUBLIC_KEY_B64"), is_private=False),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
