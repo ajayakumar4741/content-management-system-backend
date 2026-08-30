@@ -38,30 +38,53 @@ class GoogleLoginView(APIView):
                 settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
                 clock_skew_in_seconds=300,
             )
-            print('Google id_info:', id_info)
+            print('✅ Google id_info verified:', id_info)
         except Exception as exc:
-            print('Google token verification failed:', str(exc))
-            return Response({"error": "Invalid Google token", "detail": str(exc)}, status=400)
+            print('❌ Google token verification failed:', str(exc))
+            import traceback
+            traceback.print_exc()
+            return Response({
+                "error": "Invalid Google token",
+                "detail": str(exc)
+            }, status=400)
 
         email = id_info.get("email")
         if not email:
-            return Response({"error": "No email returned from Google", "detail": id_info}, status=400)
+            print('❌ No email in Google response')
+            return Response({
+                "error": "No email returned from Google",
+                "detail": str(id_info)
+            }, status=400)
 
-        user, created = CustomUser.objects.get_or_create(
-            email=email,
-            defaults={"username": email.split("@")[0]}
-        )
+        try:
+            user, created = CustomUser.objects.get_or_create(
+                email=email,
+                defaults={"username": email.split("@")[0]}
+            )
+            print(f'✅ User {"created" if created else "retrieved"}:', user.username)
+        except Exception as exc:
+            print('❌ User creation failed:', str(exc))
+            return Response({
+                "error": "Failed to create/retrieve user",
+                "detail": str(exc)
+            }, status=500)
 
-        refresh = RefreshToken.for_user(user)
-
-        return Response({
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "user": {
-                "email": user.email,
-                "username": user.username,
-            },
-        })
+        try:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "email": user.email,
+                    "username": user.username,
+                },
+            })
+        except Exception as exc:
+            print('❌ Token generation failed:', str(exc))
+            return Response({
+                "error": "Failed to generate tokens",
+                "detail": str(exc)
+            }, status=500)
 
 secret_key = settings.RECAPTCHA_SECRET_KEY
 
