@@ -20,7 +20,102 @@ from google.auth.transport import requests as google_requests
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import CustomUser
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+import logging
+
+logger = logging.getLogger(__name__)
+
 class GoogleLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        credential = request.data.get("credential")
+        if not credential:
+            return Response({"error": "Missing credential"}, status=400)
+
+        google_client_id = getattr(settings, "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", None)
+        if not google_client_id:
+            logger.error("Google Client ID is not configured in settings.")
+            return Response(
+                {"error": "Google authentication is not properly configured."},
+                status=500
+            )
+
+        # 1. Verify Google ID Token
+        try:
+            id_info = id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                google_client_id,
+                clock_skew_in_seconds=300,
+            )
+        except ValueError as exc:
+            logger.warning(f"Invalid Google token signature or format: {exc}")
+            return Response({"error": "Invalid Google token"}, status=400)
+        except Exception as exc:
+            logger.error(f"Google token verification failed: {exc}")
+            return Response(
+                {"error": "Google authentication failed", "detail": str(exc) if settings.DEBUG else "Token error"},
+                status=400
+            )
+
+        # 2. Validate Email and Verification Status
+        email = id_info.get("email")
+        is_email_verified = id_info.get("email_verified", False)
+
+        if not email or not is_email_verified:
+            return Response(
+                {"error": "Unverified or missing email address from Google account."},
+                status=400
+            )
+
+        # 3. Handle User Creation & Username Collisions Safely
+        try:
+            user = CustomUser.objects.filter(email=email).first()
+            if not user:
+                # Generate a unique username fallback
+                base_username = email.split("@")[0]
+                username = base_username
+                counter = 1
+                while CustomUser.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                user = CustomUser.objects.create_user(
+                    email=email,
+                    username=username
+                )
+        except Exception as exc:
+            logger.error(f"Database error during user processing: {exc}")
+            return Response(
+                {"error": "User processing failed", "detail": str(exc) if settings.DEBUG else "Database error"},
+                status=500
+            )
+
+        # 4. Mint Backend SimpleJWT Tokens
+        try:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "username": user.username,
+                },
+            })
+        except Exception as exc:
+            logger.error(f"JWT generation failed: {exc}")
+            return Response(
+                {"error": "Token generation failed", "detail": str(exc) if settings.DEBUG else "Authentication error"},
+                status=500
+            )
     permission_classes = [AllowAny]
 
     def post(self, request):
