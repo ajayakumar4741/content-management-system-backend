@@ -198,46 +198,18 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'blogapp.CustomUser'
 
-def decode_base64_key(key_b64, is_private=False):
-    """Decode base64 key and convert to PEM format if needed"""
+def decode_base64_key(key_b64):
     key_b64 = key_b64.strip()
-    # Add padding if necessary
     missing_padding = len(key_b64) % 4
     if missing_padding:
         key_b64 += '=' * (4 - missing_padding)
-    
     decoded_bytes = base64.b64decode(key_b64)
-    
-    # Try to decode as UTF-8 (already PEM format)
-    try:
-        return decoded_bytes.decode('utf-8')
-    except UnicodeDecodeError:
-        # If binary, it's DER format - convert to PEM
-        try:
-            if is_private:
-                key = serialization.load_der_private_key(
-                    decoded_bytes, password=None, backend=default_backend()
-                )
-                return key.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.PKCS8,
-                    encryption_algorithm=serialization.NoEncryption()
-                ).decode('utf-8')
-            else:
-                key = serialization.load_der_public_key(
-                    decoded_bytes, backend=default_backend()
-                )
-                return key.public_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PublicFormat.SubjectPublicKeyInfo
-                ).decode('utf-8')
-        except Exception as e:
-            raise ValueError(f"Failed to parse key: {e}")
+    return decoded_bytes.decode('utf-8')  # Always PEM text
 
 SIMPLE_JWT = {
     "ALGORITHM": "RS256",
-    "SIGNING_KEY": decode_base64_key(config("JWT_PRIVATE_KEY_B64"), is_private=True),
-    "VERIFYING_KEY": decode_base64_key(config("JWT_PUBLIC_KEY_B64"), is_private=False),
+    "SIGNING_KEY": config("JWT_PRIVATE_KEY_B64"),
+    "VERIFYING_KEY": config("JWT_PUBLIC_KEY_B64"),
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
