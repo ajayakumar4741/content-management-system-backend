@@ -40,9 +40,14 @@ EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")  # Use App Password for Gmail
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", default="")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET", default="")
 GOOGLE_CLIENT_ID = SOCIAL_AUTH_GOOGLE_OAUTH2_KEY
+
+if not SOCIAL_AUTH_GOOGLE_OAUTH2_KEY and not DEBUG:
+    print("⚠️ WARNING: SOCIAL_AUTH_GOOGLE_OAUTH2_KEY not set in production!")
+if not SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET and not DEBUG:
+    print("⚠️ WARNING: SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET not set in production!")
 
 # Application definition
 
@@ -217,8 +222,19 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "https://techfoliofrontend.onrender.com",
     "http://localhost:5173",
-    
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
 ]
+
+# Allow all origins in development, restrict in production
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "https://techfoliofrontend.onrender.com",
+    ]
+    CSRF_TRUSTED_ORIGINS = [
+        "https://techfoliofrontend.onrender.com",
+    ]
 
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True   # if HTTPS

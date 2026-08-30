@@ -26,10 +26,19 @@ class GoogleLoginView(APIView):
     def post(self, request):
         credential = request.data.get("credential")
         if not credential:
+            print('❌ Missing credential')
             return Response({"error": "Missing credential"}, status=400)
 
-        print('Google auth request data:', request.data)
-        print('Using Google client ID:', settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
+        if settings.DEBUG:
+            print('Google auth request data:', request.data)
+            print('Using Google client ID:', settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY)
+
+        if not settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY:
+            print('❌ Google Client ID not configured')
+            return Response({
+                "error": "Google authentication not configured",
+                "detail": "SOCIAL_AUTH_GOOGLE_OAUTH2_KEY is missing"
+            }, status=500)
 
         try:
             id_info = id_token.verify_oauth2_token(
@@ -38,22 +47,29 @@ class GoogleLoginView(APIView):
                 settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY,
                 clock_skew_in_seconds=300,
             )
-            print('✅ Google id_info verified:', id_info)
+            if settings.DEBUG:
+                print('✅ Google id_info verified:', id_info)
+        except ValueError as exc:
+            print('❌ Google token verification failed (invalid signature/format):', str(exc))
+            return Response({
+                "error": "Invalid Google token"
+            }, status=400)
         except Exception as exc:
             print('❌ Google token verification failed:', str(exc))
-            import traceback
-            traceback.print_exc()
+            if settings.DEBUG:
+                import traceback
+                traceback.print_exc()
             return Response({
-                "error": "Invalid Google token",
-                "detail": str(exc)
+                "error": "Google authentication failed",
+                "detail": str(exc) if settings.DEBUG else "Token verification error"
             }, status=400)
 
         email = id_info.get("email")
         if not email:
             print('❌ No email in Google response')
             return Response({
-                "error": "No email returned from Google",
-                "detail": str(id_info)
+                "error": "Email not provided",
+                "detail": "Google account must have email enabled"
             }, status=400)
 
         try:
@@ -64,13 +80,17 @@ class GoogleLoginView(APIView):
             print(f'✅ User {"created" if created else "retrieved"}:', user.username)
         except Exception as exc:
             print('❌ User creation failed:', str(exc))
+            if settings.DEBUG:
+                import traceback
+                traceback.print_exc()
             return Response({
-                "error": "Failed to create/retrieve user",
-                "detail": str(exc)
+                "error": "User creation failed",
+                "detail": str(exc) if settings.DEBUG else "Database error"
             }, status=500)
 
         try:
             refresh = RefreshToken.for_user(user)
+            print('✅ JWT tokens generated successfully')
             return Response({
                 "access": str(refresh.access_token),
                 "refresh": str(refresh),
@@ -81,9 +101,12 @@ class GoogleLoginView(APIView):
             })
         except Exception as exc:
             print('❌ Token generation failed:', str(exc))
+            if settings.DEBUG:
+                import traceback
+                traceback.print_exc()
             return Response({
-                "error": "Failed to generate tokens",
-                "detail": str(exc)
+                "error": "Token generation failed",
+                "detail": str(exc) if settings.DEBUG else "Authentication error"
             }, status=500)
 
 secret_key = settings.RECAPTCHA_SECRET_KEY
