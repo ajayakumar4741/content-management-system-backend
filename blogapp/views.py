@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         credential = request.data.get("credential")
