@@ -239,7 +239,15 @@ class Submission(APIView):
 def subscribe(request):
     serializer = SubscriberSerializer(data=request.data)
     if serializer.is_valid():
-        subscriber = serializer.save()
+        subscriber, created = Subscriber.objects.get_or_create(
+            email=serializer.validated_data['email']
+        )
+
+        if not created:
+            return Response(
+                {"message": "This email is already subscribed."},
+                status=status.HTTP_200_OK,
+            )
 
         # Send confirmation email
         send_mail(
