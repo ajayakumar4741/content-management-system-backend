@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
-import base64
 from decouple import config
 
 
@@ -129,23 +128,22 @@ AUTHENTICATION_BACKENDS = [
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-import dj_database_url
-
-DATABASES = {
-    'default': dj_database_url.config(default=config("DATABASE_URL"))
-}
-
 
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': 'cms_db_v53b',                # database name
-#         'USER': 'cms_db_v53b_user',           # username
-#         'PASSWORD': config("PSQL_PSWD"),      # password from env var
-#         'HOST': 'dpg-da8lhdnqj5pc73esbg5g-a.oregon-postgres.render.com',  # hostname only
-#         'PORT': '5432',                       # port
-#     }
+#     'default': dj_database_url.config(default=config("DATABASE_URL"))
 # }
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'cms_db',                # database name
+        'USER': 'postgres',                       # username
+        'PASSWORD': config("PSQL_PSWD"),      # password from env var
+        'HOST': 'localhost',  # hostname only
+        'PORT': '5432',                       # port
+    }
+}
 
 
 
@@ -202,18 +200,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'blogapp.CustomUser'
 
-def decode_base64_key(key_b64):
-    key_b64 = key_b64.strip()
-    missing_padding = len(key_b64) % 4
-    if missing_padding:
-        key_b64 += '=' * (4 - missing_padding)
-    decoded_bytes = base64.b64decode(key_b64)
-    return decoded_bytes.decode('utf-8')  # Always PEM text
+JWT_SECRET_KEY = config("JWT_SECRET_KEY", default=SECRET_KEY)
 
 SIMPLE_JWT = {
-    "ALGORITHM": "RS256",
-    "SIGNING_KEY": config("JWT_PRIVATE_KEY_B64"),
-    "VERIFYING_KEY": config("JWT_PUBLIC_KEY_B64"),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": JWT_SECRET_KEY,
     "ACCESS_TOKEN_LIFETIME": timedelta(days=5),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
 }
