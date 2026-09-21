@@ -10,6 +10,10 @@ from .forms import *
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view
 from django.core.mail import send_mail
+from django.contrib.auth.forms import SetPasswordForm
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 import requests
 from .utils import get_client_ip
 from django.conf import settings
@@ -30,6 +34,59 @@ from google.auth.transport import requests as google_requests
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        email = request.data.get("email", "").strip()
+        user_model = get_user_model()
+        users = user_model.objects.filter(email__iexact=email, is_active=True)
+
+        for user in users:
+            if not user.has_usable_password():
+                continue
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            reset_url = (
+                f"{settings.FRONTEND_URL.rstrip('/')}/reset-password/"
+                f"{uid}/{token}/"
+            )
+            send_mail(
+                "Reset your password",
+                f"Use this link to choose a new password: {reset_url}",
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+
+        return Response(
+            {"detail": "If an account exists for that email, a reset link has been sent."}
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request, uidb64, token):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = get_user_model().objects.get(pk=uid, is_active=True)
+        except (TypeError, ValueError, OverflowError, get_user_model().DoesNotExist):
+            user = None
+
+        if user is None or not default_token_generator.check_token(user, token):
+            return Response({"detail": "This password reset link is invalid or expired."}, status=400)
+
+        form = SetPasswordForm(user, request.data)
+        if not form.is_valid():
+            return Response({"errors": form.errors}, status=400)
+
+        form.save()
+        return Response({"detail": "Your password has been reset successfully."})
 
 class GoogleLoginView(APIView):
     permission_classes = [AllowAny]

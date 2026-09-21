@@ -37,6 +37,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = config("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")  # Use App Password for Gmail
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:5173")
 
 SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", default="")
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET", default="")
@@ -136,12 +137,8 @@ AUTHENTICATION_BACKENDS = [
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cms_db',                # database name
-        'USER': 'postgres',                       # username
-        'PASSWORD': config("PSQL_PSWD"),      # password from env var
-        'HOST': 'localhost',  # hostname only
-        'PORT': '5432',                       # port
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
 

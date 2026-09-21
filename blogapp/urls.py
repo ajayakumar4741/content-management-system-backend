@@ -14,5 +14,11 @@ urlpatterns = [
     path("get_userinfo/<str:username>/", get_userinfo, name="get_userinfo"),
     path("api/subscribe/", subscribe, name="subscribe"),
     path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    path("api/auth/password-reset/", PasswordResetRequestView.as_view(), name="password-reset-request"),
+    path(
+        "api/auth/password-reset/<uidb64>/<token>/",
+        PasswordResetConfirmView.as_view(),
+        name="password-reset-confirm",
+    ),
 
 ]
